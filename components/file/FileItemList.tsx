@@ -14,18 +14,11 @@ interface Props {
   isSelected: boolean;
 }
 
-export default function FileItemList({
-  file,
-  onClick,
-  onSelect,
-  isSelected,
-}: Props) {
+export default function FileItemList({ file, onClick, onSelect, isSelected }: Props) {
   const { Icon, color } = getFileInfo(file.name, file.type);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Enter") {
-      onClick(file);
-    }
+    if (e.key === "Enter") onClick(file);
   };
 
   return (
@@ -44,18 +37,9 @@ export default function FileItemList({
       {/* Icon + Selection */}
       <div
         className="relative flex-shrink-0"
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect();
-        }}
+        onClick={(e) => { e.stopPropagation(); onSelect(); }}
       >
-        <Icon
-          className={cn(
-            "w-11 h-11 p-2.5 rounded-xl transition-transform active:scale-90",
-            color
-          )}
-        />
-
+        <Icon className={cn("w-11 h-11 p-2.5 rounded-xl transition-transform active:scale-90", color)} />
         {isSelected && (
           <div className="absolute -top-1 -right-1 rounded-full">
             <CheckCircle2 className="w-4 h-4 text-blue-500" />
@@ -68,15 +52,12 @@ export default function FileItemList({
         <div
           className={cn(
             "text-sm font-medium truncate",
-            isSelected
-              ? "text-blue-500 dark:text-blue-500"
-              : "text-slate-700 dark:text-slate-200"
+            isSelected ? "text-blue-500" : "text-slate-700 dark:text-slate-200"
           )}
           title={file.name}
         >
           {shortenFileName(file.name, 40)}
         </div>
-
         <div className="flex items-center gap-2 mt-0.5">
           {file.type === "file" ? (
             <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-tight">

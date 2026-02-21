@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect } from "react";
 import { useModalManager } from "@/context/ModalManagerContext";
 
 interface Props {
@@ -18,15 +18,13 @@ export default function BaseModal({ children }: Props) {
     };
   }, []);
 
-  // ESC key
+  // Tutup modal dengan ESC
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeModal();
     };
-
     window.addEventListener("keydown", handler);
-    return () =>
-      window.removeEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [closeModal]);
 
   return (
@@ -36,7 +34,7 @@ export default function BaseModal({ children }: Props) {
     >
       <div
         className="relative w-full h-full"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         {children}
       </div>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { useModalManager } from "@/context/ModalManagerContext";
 
 type Params = {
@@ -17,85 +16,74 @@ export function useBackNavigation({
   path,
   setPath,
 }: Params) {
-  const router = useRouter();
-  // Ambil 'modal' dan 'closeModal' sesuai struktur Context yang kamu buat
   const { modal, closeModal } = useModalManager();
 
-  // Refs untuk menghindari closure trap pada event listener
   const selectedRef = useRef(selectedFiles);
   const modalTypeRef = useRef(modal.type);
   const pathRef = useRef(path);
+  const isPoppingRef = useRef(false);
+  const prevSelectedCountRef = useRef(selectedFiles.size);
+  const prevModalTypeRef = useRef(modal.type);
 
+  useEffect(() => { selectedRef.current = selectedFiles; }, [selectedFiles]);
+  useEffect(() => { modalTypeRef.current = modal.type; }, [modal.type]);
+  useEffect(() => { pathRef.current = path; }, [path]);
+
+  /* Sync URL & History */
   useEffect(() => {
-    selectedRef.current = selectedFiles;
-  }, [selectedFiles]);
+    if (isPoppingRef.current) return;
 
-  useEffect(() => {
-    modalTypeRef.current = modal.type;
-  }, [modal.type]);
-
-  useEffect(() => {
-    pathRef.current = path;
-  }, [path]);
-
-  /* =========================
-     Helper: Build URL Query
-  ========================== */
-  const buildQuery = (params: {
-    path: string;
-    modalType: string | null;
-    hasSelection: boolean;
-  }) => {
     const q = new URLSearchParams();
-    
-    if (params.path) q.set("path", params.path);
-    if (params.modalType) q.set("modal", params.modalType);
-    if (params.hasSelection) q.set("select", "true");
+    if (path) q.set("path", path);
+    if (modal.type) q.set("modal", modal.type);
+    if (selectedFiles.size > 0) q.set("select", "true");
 
-    return `?${q.toString()}`;
-  };
+    const queryString = q.toString();
+    const newUrl = queryString ? `?${queryString}` : "/";
 
-  /* =========================
-     Sync URL & History Push
-  ========================== */
-  useEffect(() => {
-    const query = buildQuery({
-      path,
-      modalType: modal.type,
-      hasSelection: selectedFiles.size > 0,
-    });
+    const currentSearch = new URLSearchParams(window.location.search);
+    const currentPath = currentSearch.get("path") ?? "";
+    const currentModal = currentSearch.get("modal") ?? "";
 
-    // Gunakan push agar tombol 'Back' browser memiliki history untuk mundur
-    // Jika hanya ingin sync tanpa nambah history, gunakan replace
-    window.history.pushState(null, "", query);
+    const shouldPush =
+      // Folder berpindah
+      path !== currentPath ||
+      // Modal baru dibuka atau ditutup
+      (!!modal.type && modal.type !== currentModal) ||
+      (!modal.type && !!currentModal) ||
+      // Seleksi baru muncul (dari 0 ke >0)
+      (selectedFiles.size > 0 && prevSelectedCountRef.current === 0) ||
+      // Seleksi dihapus (dari >0 ke 0)
+      (selectedFiles.size === 0 && prevSelectedCountRef.current > 0);
+
+    prevSelectedCountRef.current = selectedFiles.size;
+    prevModalTypeRef.current = modal.type;
+
+    if (shouldPush) {
+      window.history.pushState(null, "", newUrl);
+    } else {
+      window.history.replaceState(null, "", newUrl);
+    }
   }, [path, modal.type, selectedFiles.size]);
 
-  /* =========================
-     Handle Back Button (PopState)
-  ========================== */
+  /* Handle Back Button (PopState) */
   useEffect(() => {
-    const handlePopState = (e: PopStateEvent) => {
-      // 1. Jika ada modal yang terbuka, tutup modal dulu
+    const handlePopState = () => {
+      isPoppingRef.current = true;
+
       if (modalTypeRef.current) {
         closeModal();
-        return;
-      }
-
-      // 2. Jika ada file terpilih, batalkan pilihan
-      if (selectedRef.current.size > 0) {
+      } else if (selectedRef.current.size > 0) {
         clearSelection();
-        return;
-      }
-
-      // 3. Jika di dalam subfolder, naik ke folder atas
-      if (pathRef.current !== "") {
-        const parts = pathRef.current.split("/").filter(Boolean);
+      } else if (pathRef.current !== "") {
+        const parts = pathRef.current.split("/");
         parts.pop();
         setPath(parts.join("/"));
-        return;
       }
-      
-      // Jika semua kondisi di atas kosong, biarkan browser back ke halaman sebelumnya
+
+      setTimeout(() => {
+        isPoppingRef.current = false;
+      }, 0);
     };
 
     window.addEventListener("popstate", handlePopState);

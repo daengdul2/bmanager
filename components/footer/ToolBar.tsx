@@ -2,21 +2,20 @@
 
 import { Upload, FolderPlus } from "lucide-react";
 
-interface ToolbarProps {
+interface ToolBarProps {
   onUploadClick: () => void;
   onCreateFolder?: () => void;
   disabled?: boolean;
 }
 
-export default function Toolbar({
+export default function ToolBar({
   onUploadClick,
   onCreateFolder,
   disabled,
-}: ToolbarProps) {
+}: ToolBarProps) {
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] z-40">
       <div className="border border-slate-800 max-w-md mx-auto bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex justify-around">
-
         <button
           onClick={onUploadClick}
           disabled={disabled}
@@ -34,7 +33,6 @@ export default function Toolbar({
           <FolderPlus size={18} className="text-white" />
           Folder
         </button>
-
       </div>
     </div>
   );

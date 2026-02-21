@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type { FileItem } from "@/types/file";
 
+const ROOT = "/sdcard/Download";
+
 export function useFileManagerState() {
-  const [path, setPath] = useState("");
+  // Fix utama: init path dengan ROOT bukan ""
+  const [path, setPath] = useState(ROOT);
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] =
     useState<"name" | "type" | "date" | "size">("name");
@@ -20,24 +23,33 @@ export function useFileManagerState() {
   const [selectedFiles, setSelectedFiles] =
     useState<Set<string>>(new Set());
 
-  // ---- Selection helpers ----
+  // Fix: wrap semua setter & helper dengan useCallback
+  // agar referensinya stabil dan tidak memicu re-render/loop di useEffect
+  const stableSetPath = useCallback((p: string) => {
+    // Jika path kosong (back dari root), kembalikan ke ROOT
+    setPath(p || ROOT);
+  }, []);
 
-  const toggleSelect = (filePath: string) => {
+  const stableSetQuery = useCallback((q: string) => {
+    setQuery(q);
+  }, []);
+
+  const toggleSelect = useCallback((filePath: string) => {
     setSelectedFiles(prev => {
       const next = new Set(prev);
       if (next.has(filePath)) next.delete(filePath);
       else next.add(filePath);
       return next;
     });
-  };
+  }, []);
 
-  const clearSelection = () => {
+  const clearSelection = useCallback(() => {
     setSelectedFiles(new Set());
-  };
+  }, []);
 
   return {
-    path, setPath,
-    query, setQuery,
+    path, setPath: stableSetPath,
+    query, setQuery: stableSetQuery,
     sortKey, setSortKey,
     sortOrder, setSortOrder,
     viewMode, setViewMode,

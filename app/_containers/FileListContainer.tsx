@@ -3,16 +3,14 @@
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useFileManager } from "@/context/FileManagerContext";
-
 import { useFiles } from "@/hooks/useFiles";
 import { useFilteredFiles } from "@/hooks/useFilteredFiles";
 import { useFileActions } from "@/hooks/useFileActions";
 import { useBackNavigation } from "@/hooks/useBackNavigation";
-import { useModalManager } from "@/context/ModalManagerContext";
 
 import FileListView from "@/components/file/FileListView";
 
-export default function FileListController() {
+export default function FileListContainer() {
   const {
     path,
     setPath,
@@ -27,56 +25,52 @@ export default function FileListController() {
     refreshKey,
   } = useFileManager();
 
-  const { files, loading } = useFiles(path, refreshKey);
+  // Fix #4: destructure error dari useFiles
+  const { files, loading, error } = useFiles(path, refreshKey);
   const searchParams = useSearchParams();
+  const { handleItemClick, handleDelete, handleRename } = useFileActions();
 
-  const { handleItemClick, handleDelete, handleCreateFolder } =
-    useFileActions();
-
-  const { closeModal, activeModal } = useModalManager();
-
-  useBackNavigation({
-    selectedFiles,
-    clearSelection,
-    currentFile: null,
-    setCurrentFile: () => {},
-    path,
-    setPath,
-  });
-
-  const sortedFiles = useFilteredFiles(
-    files,
-    query,
-    sortKey,
-    sortOrder
-  );
-
-  /* Sync URL path */
+  // Sync URL path → state
+  // Fix #3: setPath harus di-memoize dengan useCallback di FileManagerContext
+  //         agar effect ini tidak re-run setiap render
   useEffect(() => {
     const urlPath = searchParams.get("path") ?? "";
     setPath(urlPath);
   }, [searchParams, setPath]);
 
-  /* Reset search when path changes */
+  // Reset search saat pindah folder
   useEffect(() => {
     setQuery("");
   }, [path, setQuery]);
 
+  // Back button handling
+  useBackNavigation({ selectedFiles, clearSelection, path, setPath });
+
+  // Fix #1: hanya kirim sortedFiles ke FileListView, bukan files mentah
+  const sortedFiles = useFilteredFiles(files, query, sortKey, sortOrder);
+
+  // Fix #4: tampilkan pesan error jika fetch gagal
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full text-red-500">
+        <p>Gagal memuat file: {error.message ?? "Terjadi kesalahan."}</p>
+      </div>
+    );
+  }
+
   return (
     <FileListView
       loading={loading}
-      files={files}
+      // Fix #1: hapus prop files, cukup kirim sortedFiles
       sortedFiles={sortedFiles}
       viewMode={viewMode}
-      currentFile={null} // sekarang preview tidak di sini
       selectedFiles={selectedFiles}
+      // Fix #2: hapus selectedCount, biarkan FileListView hitung sendiri via selectedFiles.size
       onItemClick={handleItemClick}
       onSelect={toggleSelect}
-      onClosePreview={closeModal}
-      selectedCount={selectedFiles.size}
       onClearSelection={clearSelection}
       onDelete={handleDelete}
-      onCreateFolder={handleCreateFolder}
+      onRename={handleRename}
     />
   );
 }

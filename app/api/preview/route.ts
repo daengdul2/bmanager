@@ -48,7 +48,9 @@ export async function GET(req: NextRequest) {
     return new Response("File not specified", { status: 400 });
   }
 
-  const safePath = path.normalize(path.join(ROOT, file));
+  const safePath = path.normalize(
+  file.startsWith("/") ? file : path.join(ROOT, file)
+);
 
   if (!safePath.startsWith(ROOT)) {
     return new Response("Access denied", { status: 403 });

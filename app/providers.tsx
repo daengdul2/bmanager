@@ -1,3 +1,5 @@
+"use client";
+
 import { TaskManagerProvider } from "@/context/TaskManagerContext";
 import { FileManagerProvider } from "@/context/FileManagerContext";
 import { ModalManagerProvider } from "@/context/ModalManagerContext";
@@ -7,7 +9,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <TaskManagerProvider>
       <FileManagerProvider>
         <ModalManagerProvider>
-        {children}
+          {children}
         </ModalManagerProvider>
       </FileManagerProvider>
     </TaskManagerProvider>

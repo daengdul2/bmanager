@@ -14,9 +14,13 @@ export type FileEntry = {
 
 export function resolveSafePath(subPath = ""): string {
   const target = path.resolve(ROOT, subPath);
-  if (!target.startsWith(ROOT)) {
-    throw new Error("Invalid path");
+
+  // Pastikan target adalah ROOT itu sendiri atau berada di dalamnya
+  // Gunakan ROOT + "/" agar "/sdcard/DownloadEvil" tidak lolos
+  if (target !== ROOT && !target.startsWith(ROOT + "/")) {
+    throw new Error("Invalid path: akses di luar direktori root tidak diizinkan");
   }
+
   return target;
 }
 
@@ -26,13 +30,13 @@ export async function listFiles(dir = ""): Promise<FileEntry[]> {
     const entries = await fs.readdir(target, { withFileTypes: true });
 
     const mapped: FileEntry[] = await Promise.all(
-      entries.map(async e => {
+      entries.map(async (e) => {
         const fullPath = path.join(target, e.name);
         const stats = await fs.stat(fullPath);
 
         return {
           name: e.name,
-          type: e.isDirectory() ? "folder" : "file", // ✅ sesuai union
+          type: e.isDirectory() ? "folder" : "file",
           size: e.isDirectory() ? undefined : stats.size,
           mtime: stats.mtimeMs,
           previewType: e.isDirectory() ? undefined : getPreviewType(e.name),

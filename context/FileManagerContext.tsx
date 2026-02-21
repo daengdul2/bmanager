@@ -3,8 +3,8 @@
 import {
   createContext,
   useContext,
-  ReactNode,
   useState,
+  type ReactNode,
 } from "react";
 import { useFileManagerState } from "@/hooks/useFileManagerState";
 
@@ -13,25 +13,20 @@ type FileManagerContextType =
     uiVisible: boolean;
     toggleUi: () => void;
     setUiVisible: (v: boolean) => void;
+    refreshKey: number;
+    refreshFiles: () => void;
   };
 
-const FileManagerContext =
-  createContext<FileManagerContextType | null>(null);
+const FileManagerContext = createContext<FileManagerContextType | null>(null);
 
-export function FileManagerProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function FileManagerProvider({ children }: { children: ReactNode }) {
   const state = useFileManagerState();
   const [uiVisible, setUiVisible] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const toggleUi = () => setUiVisible(prev => !prev);
-const [refreshKey, setRefreshKey] = useState(0);
+  const toggleUi = () => setUiVisible((prev) => !prev);
+  const refreshFiles = () => setRefreshKey((prev) => prev + 1);
 
-const refreshFiles = () => {
-  setRefreshKey(prev => prev + 1);
-};
   return (
     <FileManagerContext.Provider
       value={{
@@ -40,7 +35,7 @@ const refreshFiles = () => {
         toggleUi,
         setUiVisible,
         refreshKey,
-refreshFiles,
+        refreshFiles,
       }}
     >
       {children}
@@ -50,9 +45,8 @@ refreshFiles,
 
 export function useFileManager() {
   const ctx = useContext(FileManagerContext);
-  if (!ctx)
-    throw new Error(
-      "useFileManager must be used within FileManagerProvider"
-    );
+  if (!ctx) {
+    throw new Error("useFileManager must be used within FileManagerProvider");
+  }
   return ctx;
 }

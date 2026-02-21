@@ -8,119 +8,182 @@ import { useFileManager } from "@/context/FileManagerContext";
 import { useModalManager } from "@/context/ModalManagerContext";
 
 export function useFileActions() {
-    const {
-        path,
-        setPath,
-        selectedFiles,
-        clearSelection,
-        refreshFiles,
-        toggleSelect
-    } = useFileManager();
+  const {
+    path,
+    setPath,
+    selectedFiles,
+    clearSelection,
+    refreshFiles,
+    toggleSelect,
+  } = useFileManager();
 
-    const { addTask, updateTask, finishTask, failTask } = useTaskManager();
-    
-    // Gunakan openModal dari ModalManagerContext
-    const { openModal } = useModalManager();
+  const { addTask, updateTask, finishTask, failTask, removeTask } = useTaskManager();
+  const { openModal, openPreview, openConfirm, openRename, openCreateFolder } = useModalManager();
 
-    /* =========================
-       HANDLE CLICK
-    ========================== */
-    const handleItemClick = useCallback(
-        (file: FileItem) => {
-            const fullPath = file.path || joinPath(path, file.name);
 
-            // Jika sedang dalam mode seleksi (ada file yang terpilih)
-            if (selectedFiles.size > 0) {
-                toggleSelect(fullPath);
-                return;
-            }
 
-            if (file.type === "folder") {
-                setPath(fullPath);
-            } else {
-                // Pastikan props yang dikirim sesuai dengan yang diharapkan FileListView
-                // Kita mengirim 'file' sebagai props agar bisa diakses via modal.props
-                openModal("preview", file);
-            }
-        },
-        [path, selectedFiles, setPath, toggleSelect, openModal]
-    );
+  /* =========================
+     HANDLE ITEM CLICK
+  ========================= */
+  const handleItemClick = useCallback(
+    (file: FileItem) => {
+      const fullPath = file.path || joinPath(path, file.name);
 
-    /* =========================
-       CREATE FOLDER
-    ========================== */
-    const handleCreateFolder = async () => {
-        // Tips: Ke depannya kamu bisa ganti prompt() dengan openModal("create-folder")
-        const name = prompt("Nama folder baru:");
-        if (!name) return;
+      // Jika sedang dalam mode seleksi, toggle seleksi
+      if (selectedFiles.size > 0) {
+        toggleSelect(fullPath);
+        return;
+      }
 
-        const taskId = addTask({
-            type: "move", // atau buat tipe "create" jika ada
-            label: `Membuat folder "${name}"`
-        });
+      if (file.type === "folder") {
+        setPath(fullPath);
+      } else {
+        // Kirim file sebagai { file: FileItem } ke modal preview
+        openPreview(file);
+      }
+    },
+    [path, selectedFiles, setPath, toggleSelect, openPreview]
+  );
 
-        try {
-            const res = await fetch("/api/folder", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    currentPath: path,
-                    name
-                })
-            });
+  /* =========================
+     CREATE FOLDER
+  ========================= */
+  const handleCreateFolder = () => {
+  openCreateFolder(path, async (name) => {
+    const taskId = addTask({
+      id: crypto.randomUUID(),
+      type: "move",
+      label: `Membuat folder "${name}"`,
+    });
 
-            if (!res.ok) throw new Error();
+    try {
+      const res = await fetch("/api/folder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPath: path, name }),
+      });
 
-            updateTask(taskId, 100);
-            finishTask(taskId);
-            refreshFiles();
-        } catch (error) {
-            failTask(taskId);
-        }
-    };
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error ?? "Create folder failed");
+      }
 
-    /* =========================
-       DELETE
-    ========================== */
-    const handleDelete = async () => {
-        if (selectedFiles.size === 0) return;
+      updateTask(taskId, 100);
+      finishTask(taskId);
+      refreshFiles();
+    } catch (error: any) {
+      failTask(taskId);
+      alert(`Gagal membuat folder: ${error.message}`);
+    }
+  });
+};
 
-        // Sama seperti create, ini bisa diganti dengan modal konfirmasi custom
-        const confirmDelete = confirm(`Hapus ${selectedFiles.size} item yang dipilih?`);
-        if (!confirmDelete) return;
+  /* =========================
+     DELETE
+  ========================= */
+const handleDelete = async () => {
+  if (selectedFiles.size === 0) return;
 
-        const taskId = addTask({
-            type: "delete",
-            label: `Menghapus ${selectedFiles.size} berkas`
-        });
+  // Ambil info dulu
+  let title = `Hapus ${selectedFiles.size} item?`;
+  let description = "Tindakan ini tidak dapat dibatalkan.";
 
-        try {
-            const res = await fetch("/api/delete", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    files: Array.from(selectedFiles)
-                })
-            });
+  try {
+    const infoRes = await fetch("/api/delete-info", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ files: Array.from(selectedFiles) }),
+    });
 
-            if (!res.ok) throw new Error("Delete failed");
+    if (infoRes.ok) {
+      const info = await infoRes.json();
+      const folderNote = info.folderCount > 0
+        ? `${info.folderCount} folder dan ${info.totalFileCount} file`
+        : `${info.totalFileCount} file`;
+      description = `${folderNote} akan dihapus.\nTotal ukuran: ${info.totalSizeFormatted}\n\nTindakan ini tidak dapat dibatalkan.`;
+    }
+  } catch {
+    // tetap lanjut dengan pesan default
+  }
 
-            updateTask(taskId, 100);
-            finishTask(taskId);
+  openConfirm(title, description, async () => {
+    const taskId = addTask({
+      id: crypto.randomUUID(),
+      type: "delete",
+      label: `Menghapus ${selectedFiles.size} item`,
+    });
 
-            clearSelection();
-            refreshFiles();
-        } catch (error) {
-            failTask(taskId);
-        }
-    };
+    try {
+      const res = await fetch("/api/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files: Array.from(selectedFiles) }),
+      });
 
-    // Fungsi rename dsb tetap sama...
-    
-    return {
-        handleItemClick,
-        handleDelete,
-        handleCreateFolder,
-        handleRename: async (oldPath: string, newName: string) => { /* logic */ }
-    };
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error ?? "Delete failed");
+      }
+
+      updateTask(taskId, 100);
+      finishTask(taskId);
+      clearSelection();
+      refreshFiles();
+    } catch (error: any) {
+      failTask(taskId);
+      alert(`Gagal menghapus: ${error.message}`);
+    }
+  });
+};
+
+  /* =========================
+     RENAME
+  ========================= */
+const handleRename = async (oldPath: string) => {
+  const oldName = oldPath.split("/").pop() ?? "";
+
+  openRename(oldPath, oldName, async (newName) => {
+    const taskId = addTask({
+      id: crypto.randomUUID(),
+      type: "rename",
+      label: `Mengganti nama menjadi "${newName}"`,
+    });
+
+    try {
+      const res = await fetch("/api/rename", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ oldPath, newName }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error ?? "Rename failed");
+      }
+
+      updateTask(taskId, 100);
+      finishTask(taskId);
+      clearSelection();
+      refreshFiles();
+      setTimeout(() => removeTask(taskId), 3000);
+    } catch (error: any) {
+      failTask(taskId);
+      alert(`Gagal mengganti nama: ${error.message}`);
+      setTimeout(() => removeTask(taskId), 3000);
+    }
+  });
+};
+
+  /* =========================
+     UPLOAD MODAL
+  ========================= */
+  const handleOpenUpload = () => openModal("upload");
+
+  return {
+    handleItemClick,
+    handleDelete,
+    handleCreateFolder,
+    handleRename,
+    handleOpenUpload,
+  };
 }

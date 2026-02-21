@@ -5,46 +5,40 @@ import { Folder, SearchX } from "lucide-react";
 import FileItemCard from "./FileItemCard";
 import FileItemList from "./FileItemList";
 import EmptyState from "./EmptyState";
-import FilePreview from "@/components/modal/FilePreview";
-import ActionBar from "../footer/ActionBar";
-import ToolBar from "../controller/ToolBarController";
+import ActionBar from "@/components/footer/ActionBar";
 
 import type { FileItem } from "@/types/file";
 
 interface Props {
   loading: boolean;
-  files: FileItem[];
+  totalCount: number;         // Fix #3: ganti files[] dengan totalCount untuk empty state check
   sortedFiles: FileItem[];
   viewMode: "grid" | "list";
-  currentFile: FileItem | null; // Data dari modal.props
   selectedFiles: Set<string>;
-  selectedCount: number;
-
+  // Fix #3: hapus selectedCount
   onItemClick: (file: FileItem) => void;
   onSelect: (filePath: string) => void;
-  onClosePreview: () => void;
-
   onClearSelection: () => void;
   onDelete: () => void;
-  onCreateFolder: () => void;
+  onRename: (oldPath: string) => void; // Fix #1: tambahkan parameter oldPath
 }
 
 export default function FileListView({
   loading,
-  files,
+  totalCount,               // Fix #3
   sortedFiles,
   viewMode,
-  currentFile,
   selectedFiles,
-  selectedCount,
   onItemClick,
   onSelect,
-  onClosePreview,
   onClearSelection,
   onDelete,
-  onCreateFolder,
+  onRename,
 }: Props) {
-  
+  // Fix #2: derive selectedPath dari selectedFiles saat hanya 1 file dipilih
+  const selectedCount = selectedFiles.size;
+  const selectedPath = selectedCount === 1 ? Array.from(selectedFiles)[0] : null;
+
   // 1. Loading State
   if (loading) {
     return (
@@ -54,8 +48,8 @@ export default function FileListView({
     );
   }
 
-  // 2. Empty State (No Files at all)
-  if (files.length === 0) {
+  // 2. Empty State (tidak ada file sama sekali)
+  if (totalCount === 0) {
     return <EmptyState icon={Folder} message="Folder ini kosong" />;
   }
 
@@ -65,30 +59,29 @@ export default function FileListView({
   }
 
   return (
-    <div className="relative min-h-screen pb-32"> {/* Tambah padding bottom agar tidak tertutup ActionBar */}
-      
+    <div className="relative min-h-screen pb-32">
       {/* GRID / LIST VIEW */}
       <main className="p-4">
         {viewMode === "grid" ? (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-            {sortedFiles.map(file => (
+            {sortedFiles.map((file) => (
               <FileItemCard
                 key={file.path}
                 file={file}
                 isSelected={selectedFiles.has(file.path)}
-                onClick={() => onItemClick(file)}
+                onClick={onItemClick}
                 onSelect={() => onSelect(file.path)}
               />
             ))}
           </div>
         ) : (
           <div className="flex flex-col space-y-1">
-            {sortedFiles.map(file => (
+            {sortedFiles.map((file) => (
               <FileItemList
                 key={file.path}
                 file={file}
                 isSelected={selectedFiles.has(file.path)}
-                onClick={() => onItemClick(file)}
+                onClick={onItemClick}
                 onSelect={() => onSelect(file.path)}
               />
             ))}
@@ -96,26 +89,14 @@ export default function FileListView({
         )}
       </main>
 
-      {/* OVERLAY MODALS */}
-      {/* Render preview jika currentFile (modal.props) tersedia */}
-      {currentFile && (
-        <FilePreview
-          file={currentFile}
-          onClose={onClosePreview}
-        />
-      )}
-
-      {/* CONTROLS */}
-      <ToolBar
-        selectedCount={selectedCount}
-        handleCreateFolder={onCreateFolder}
-      />
-
+      {/* ACTION BAR — muncul saat ada seleksi */}
       <ActionBar
         selectedCount={selectedCount}
         onClear={onClearSelection}
-        handleDelete={onDelete}
-        onMove={() => {}} // TODO: Implement move logic
+        onDelete={onDelete}
+        // Fix #2: kirim selectedPath ke onRename, disable jika lebih dari 1 file dipilih
+        onRename={selectedPath ? () => onRename(selectedPath) : undefined}
+        onMove={() => {}} // TODO: Implement move
       />
     </div>
   );

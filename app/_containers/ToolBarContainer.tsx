@@ -5,21 +5,18 @@ import { useUploadManager } from "@/hooks/useUploadManager";
 import { useFileActions } from "@/hooks/useFileActions";
 import ToolBar from "@/components/footer/ToolBar";
 
-export default function UploadController() {
+export default function ToolBarContainer() {
   const { openModal } = useModalManager();
-  const upload = useUploadManager();
+  const { uploading } = useUploadManager();
   const { handleCreateFolder } = useFileActions();
 
-  const handleUploadClick = () => {
-    openModal("upload");
-  };
-
+  const handleUploadClick = () => openModal("upload");
 
   return (
     <ToolBar
       onUploadClick={handleUploadClick}
       onCreateFolder={handleCreateFolder}
-      disabled={upload.uploading}
+      disabled={uploading}
     />
   );
 }

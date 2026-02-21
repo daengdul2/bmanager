@@ -1,4 +1,6 @@
+const ROOT = "/sdcard/Download";
+
 export function joinPath(base: string, name: string) {
-    if (!base) return name;
-    return `${base.replace(/\/$/, "")}/${name}`;
+  const safBase = base || ROOT; // ← pakai ROOT jika base kosong
+  return `${safBase.replace(/\/$/, "")}/${name}`;
 }

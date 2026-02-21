@@ -1,20 +1,21 @@
 "use client";
 
-import { X, Trash2, Move, Share2, Download } from "lucide-react";
+import { X, Trash2, Move, Edit } from "lucide-react";
 
 interface ActionBarProps {
   selectedCount: number;
   onClear: () => void;
-  handleDelete?: () => void;
+  onDelete?: () => void;
   onMove?: () => void;
+  onRename?: () => void;
 }
-
 
 export default function ActionBar({
   selectedCount,
   onClear,
-  handleDelete,
+  onDelete,
   onMove,
+  onRename,
 }: ActionBarProps) {
   if (selectedCount === 0) return null;
 
@@ -35,17 +36,34 @@ export default function ActionBar({
       </div>
 
       <div className="flex gap-5">
-        <button 
-          onClick={onMove}
-          className="flex flex-col items-center gap-1 group"
-        >
-          <Move className="w-5 h-5 text-blue-400 group-active:scale-90 transition-transform" />
-          <span className="text-[10px] text-gray-400">Pindah</span>
-        </button>
-        
-        <button 
-          onClick={() => handleDelete?.()}
-          className="flex flex-col items-center gap-1 group"
+        {/* Fix #3: sembunyikan tombol Move jika handler belum tersedia */}
+        {onMove && (
+          <button
+            onClick={onMove}
+            className="flex flex-col items-center gap-1 group"
+          >
+            <Move className="w-5 h-5 text-blue-400 group-active:scale-90 transition-transform" />
+            <span className="text-[10px] text-gray-400">Pindah</span>
+          </button>
+        )}
+
+        {/* Fix #1: ganti <></> dengan null, Fix #2: tambah disabled state */}
+        {selectedCount === 1 ? (
+          <button
+            onClick={onRename}
+            disabled={!onRename}
+            className="flex flex-col items-center gap-1 group disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Edit className="w-5 h-5 text-blue-400 group-active:scale-90 transition-transform" />
+            <span className="text-[10px] text-gray-400">Rename</span>
+          </button>
+        ) : null}
+
+        {/* Fix #2: tambah disabled state */}
+        <button
+          onClick={onDelete}
+          disabled={!onDelete}
+          className="flex flex-col items-center gap-1 group disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Trash2 className="w-5 h-5 text-red-400 group-active:scale-90 transition-transform" />
           <span className="text-[10px] text-gray-400">Hapus</span>

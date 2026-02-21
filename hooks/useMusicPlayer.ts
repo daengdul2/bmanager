@@ -2,22 +2,36 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useFileManager } from "@/context/FileManagerContext";
+import { useModalManager } from "@/context/ModalManagerContext";
 import type { FileItem } from "@/types/file";
 
 export function useMusicPlayer(autoPlay: boolean) {
-  const { fileList, currentFile, setCurrentFile } = useFileManager();
+  const { fileList } = useFileManager();
+  const { modal, openPreview } = useModalManager();
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // 1. Playlist memoized
-  const playlist = useMemo(() => {
-    return (fileList ?? []).filter((f) => f.previewType === "audio");
-  }, [fileList]);
+  // Playlist: hanya file audio dari fileList
+  const playlist = useMemo(
+    () => fileList.filter((f) => f.previewType === "audio"),
+    [fileList]
+  );
 
-  // 2. Derive index dari currentFile (Single Source of Truth)
-  const currentIndex = useMemo(() => {
-    if (!currentFile) return -1;
-    return playlist.findIndex((f) => f.path === currentFile.path);
-  }, [playlist, currentFile]);
+  // Ambil currentFile hanya jika modal sedang preview file audio
+  const currentFile: FileItem | null =
+    modal.type === "preview" &&
+    modal.props &&
+    "file" in modal.props &&
+    modal.props.file.previewType === "audio"
+      ? modal.props.file
+      : null;
+
+  const currentIndex = useMemo(
+    () =>
+      currentFile
+        ? playlist.findIndex((f) => f.path === currentFile.path)
+        : -1,
+    [playlist, currentFile]
+  );
 
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [currentTime, setCurrentTime] = useState(0);
@@ -26,21 +40,23 @@ export function useMusicPlayer(autoPlay: boolean) {
 
   const currentTrack = playlist[currentIndex] ?? null;
 
-  // 3. Helper untuk mengganti lagu
-  const changeTrack = useCallback((index: number) => {
-    if (index >= 0 && index < playlist.length) {
-      setCurrentFile(playlist[index]);
-      setIsPlaying(true);
-    }else{
-      setIsPlaying(false);
-    }
-  }, [playlist, setCurrentFile]);
+  // Ganti track via openPreview
+  const changeTrack = useCallback(
+    (index: number) => {
+      if (index >= 0 && index < playlist.length) {
+        openPreview(playlist[index]);
+        setIsPlaying(true);
+      } else {
+        setIsPlaying(false);
+      }
+    },
+    [playlist, openPreview]
+  );
 
-  // 4. Play/Pause Logic
+  // Play/Pause
   const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
-
     if (audio.paused) {
       audio.play().catch(() => setIsPlaying(false));
       setIsPlaying(true);
@@ -50,16 +66,29 @@ export function useMusicPlayer(autoPlay: boolean) {
     }
   };
 
-  // 5. Effect untuk menghandle perubahan track secara otomatis
+  // Auto play saat track berubah
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
-
-    // Jika isPlaying true, pastikan audio jalan saat src berubah
     if (isPlaying) {
       audio.play().catch(() => setIsPlaying(false));
     }
   }, [currentTrack, isPlaying]);
+
+  // Reset posisi saat track berubah
+  useEffect(() => {
+    if (!audioRef.current) return;
+    setCurrentTime(0);
+    setDuration(0);
+    audioRef.current.currentTime = 0;
+  }, [currentTrack?.path]);
+
+  // Sync volume ke elemen audio
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
 
   const src = currentTrack
     ? `/api/preview?file=${encodeURIComponent(currentTrack.path)}`

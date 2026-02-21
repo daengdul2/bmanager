@@ -4,49 +4,70 @@ import fs from "fs/promises";
 
 export const runtime = "nodejs";
 
-const ROOT = "/sdcard/Download"; // sesuaikan dengan root kamu
+const ROOT = "/sdcard/Download";
+
+function resolveSafe(target: string) {
+  const resolved = path.resolve(target);
+  if (!resolved.startsWith(path.resolve(ROOT))) {
+    throw new Error("Access denied");
+  }
+  return resolved;
+}
+
+function sanitizeFileName(name: string): string {
+  return path
+    .basename(name)
+    .replace(/[\/\\:*?"<>|]/g, "_")
+    .trim();
+}
 
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
-
     const files = formData.getAll("files") as File[];
     const currentPath = (formData.get("path") as string) || "";
 
     if (!files.length) {
-      return NextResponse.json(
-        { error: "No files uploaded" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No files uploaded" }, { status: 400 });
     }
 
-    const uploadDir = path.join(ROOT, currentPath);
+    // Fix: jika currentPath sudah absolut, pakai langsung tanpa join ROOT
+    const uploadDir = resolveSafe(
+      currentPath.startsWith("/") ? currentPath : path.join(ROOT, currentPath)
+    );
 
     await fs.mkdir(uploadDir, { recursive: true });
 
     const results = [];
+    const skipped = [];
 
     for (const file of files) {
+      const safeName = sanitizeFileName(file.name);
+      if (!safeName) {
+        skipped.push({ name: file.name, reason: "Nama file tidak valid" });
+        continue;
+      }
+
+      const filePath = path.join(uploadDir, safeName);
+
+      try {
+        await fs.access(filePath);
+        skipped.push({ name: safeName, reason: "File sudah ada" });
+        continue;
+      } catch {
+        // Aman untuk ditulis
+      }
+
       const buffer = Buffer.from(await file.arrayBuffer());
-
-      const filePath = path.join(uploadDir, file.name);
-
       await fs.writeFile(filePath, buffer);
-
-      results.push({
-        name: file.name,
-        size: file.size,
-      });
+      results.push({ name: safeName, size: file.size });
     }
 
-    return NextResponse.json({
-      success: true,
-      uploaded: results,
-    });
-  } catch (err) {
+    return NextResponse.json({ success: true, uploaded: results, skipped });
+  } catch (err: any) {
     return NextResponse.json(
-      { error: "Upload failed" },
-      { status: 500 }
+      { error: err.message ?? "Upload failed" },
+      { status: err.message === "Access denied" ? 403 : 500 }
     );
   }
 }

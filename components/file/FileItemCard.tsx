@@ -14,18 +14,11 @@ interface Props {
   isSelected: boolean;
 }
 
-export default function FileItemCard({
-  file,
-  onClick,
-  onSelect,
-  isSelected,
-}: Props) {
+export default function FileItemCard({ file, onClick, onSelect, isSelected }: Props) {
   const { Icon, color } = getFileInfo(file.name, file.type);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Enter") {
-      onClick(file);
-    }
+    if (e.key === "Enter") onClick(file);
   };
 
   return (
@@ -43,10 +36,7 @@ export default function FileItemCard({
     >
       {/* Checkbox */}
       <div
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect();
-        }}
+        onClick={(e) => { e.stopPropagation(); onSelect(); }}
         className="absolute top-1 left-1 p-1 z-10"
       >
         {isSelected ? (
@@ -57,18 +47,10 @@ export default function FileItemCard({
       </div>
 
       {/* Icon */}
-      <Icon
-        className={cn(
-          "w-12 h-12 p-3 rounded-xl mb-2 transition-transform group-hover:scale-110",
-          color
-        )}
-      />
+      <Icon className={cn("w-12 h-12 p-3 rounded-xl mb-2 transition-transform group-hover:scale-110", color)} />
 
       {/* File Name */}
-      <div
-        className="text-xs text-center max-w-full text-gray-700 dark:text-gray-300"
-        title={file.name}
-      >
+      <div className="text-xs text-center max-w-full text-gray-700 dark:text-gray-300" title={file.name}>
         {shortenFileName(file.name)}
       </div>
 

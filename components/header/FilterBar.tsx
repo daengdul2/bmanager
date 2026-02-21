@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Grid, List, Search, X } from "lucide-react";
 import { useFileManager } from "@/context/FileManagerContext"; // ambil context
 
-export default function Toolbar() {
+export default function FilterBar() {
   const { sortKey, setSortKey, sortOrder, setSortOrder, viewMode, setViewMode, query, setQuery } = useFileManager();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
