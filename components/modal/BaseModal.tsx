@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect } from "react";
 import { useModalManager } from "@/context/ModalManagerContext";
+import { useLockBodyScroll } from "@/hooks/useLockBodyScroll"
 
 interface Props {
   children: ReactNode;
@@ -10,13 +11,7 @@ interface Props {
 export default function BaseModal({ children }: Props) {
   const { closeModal } = useModalManager();
 
-  // Lock scroll
-  useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, []);
+  useLockBodyScroll(true);
 
   // Tutup modal dengan ESC
   useEffect(() => {
@@ -29,7 +24,7 @@ export default function BaseModal({ children }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[999] bg-black/40 backdrop-blur-sm flex items-center justify-center"
+      className="fixed inset-0 z-[999] backdrop-blur-sm flex items-center justify-center"
       onClick={closeModal}
     >
       <div

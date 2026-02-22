@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useState,
+  useCallback,
   type ReactNode,
 } from "react";
 import { useFileManagerState } from "@/hooks/useFileManagerState";
@@ -24,8 +25,8 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
   const [uiVisible, setUiVisible] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const toggleUi = () => setUiVisible((prev) => !prev);
-  const refreshFiles = () => setRefreshKey((prev) => prev + 1);
+  const toggleUi = useCallback(() => setUiVisible((prev) => !prev), []);
+const refreshFiles = useCallback(() => setRefreshKey((prev) => prev + 1), []);
 
   return (
     <FileManagerContext.Provider

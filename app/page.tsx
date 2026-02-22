@@ -1,22 +1,19 @@
 "use client";
 
-import Navbar from "@/components/header/Navbar";
-import Breadcrumb from "@/components/header/Breadcrumb";
-import FilterBar from "@/components/header/FilterBar";
-import FileListContainer from "./_containers/FileListContainer";
-import ToolBarContainer from "./_containers/ToolBarContainer";
+import Header from "@/components/header/Header";
+import FileListContainer from "@/app/_containers/FileListContainer";
+import ActionBarContainer from "@/app/_containers/ActionBarContainer";
+import ToolBarContainer from "@/app/_containers/ToolBarContainer";
+
 
 export default function Page() {
   return (
     <>
-      <header className="sticky top-0 z-30 bg-white dark:bg-slate-900 px-4">
-        <Navbar />
-        <FilterBar />
-        <Breadcrumb />
-      </header>
+      <Header />
 
-      <FileListContainer />
       <ToolBarContainer />
+      <FileListContainer />
+      <ActionBarContainer />
     </>
   );
 }

@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "rounded" | "ghost" | "danger" | "confirm" | "icon" | "outline" | "link";
+  variant?: "default" | "rounded" | "ghost" | "danger" | "confirm" | "icon" | "outline" | "blue" | "link";
   size?: "xs" | "small" | "medium" | "normal" | "large";
   loading?: boolean;
   icon?: ReactNode; // icon di sebelah kiri teks
@@ -33,13 +33,14 @@ export default function Button({
         "active:scale-95",
 
         // Variant
-        variant === "default"  && "rounded-xl bg-slate-800 text-slate-300 text-sm hover:bg-slate-700",
+        variant === "default"  && "rounded-lg bg-slate-800 text-slate-300 text-sm hover:bg-slate-700",
         variant === "rounded"  && "bg-black/40 hover:bg-black/60 text-white rounded-full",
-        variant === "ghost"    && "bg-transparent hover:bg-slate-800 text-slate-300 rounded-xl",
-        variant === "danger"   && "rounded-xl bg-red-500 text-white text-sm hover:bg-red-600",
-        variant === "confirm"  && "rounded-xl bg-green-500 text-white text-sm hover:bg-green-600",
+        variant === "ghost"    && "bg-transparent hover:bg-slate-800 text-slate-300 rounded-lg",
+        variant === "danger"   && "rounded-lg bg-red-500 text-white text-sm hover:bg-red-600",
+        variant === "confirm"  && "rounded-lg bg-green-500 text-white text-sm hover:bg-green-600",
         // Tombol outline — border tanpa background
-        variant === "outline"  && "rounded-xl border border-slate-600 text-slate-300 text-sm hover:bg-slate-800",
+        variant === "outline"  && "rounded-lg border border-slate-600 text-slate-300 text-sm hover:bg-slate-800",
+        variant === "blue"  && "rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600",
         // Tombol teks saja tanpa background
         variant === "link"     && "text-blue-400 hover:text-blue-300 hover:underline underline-offset-4 text-sm",
         // Tombol icon-only — ukuran mengikuti size, tanpa padding teks

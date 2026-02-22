@@ -1,18 +1,9 @@
 import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs/promises";
+import { resolveSafePath } from "@/lib/fs"; // ← ganti ROOT & resolveSafe lokal
 
 export const runtime = "nodejs";
-
-const ROOT = "/sdcard/Download";
-
-function resolveSafe(target: string) {
-  const resolved = path.resolve(target);
-  if (!resolved.startsWith(path.resolve(ROOT))) {
-    throw new Error("Access denied");
-  }
-  return resolved;
-}
 
 function sanitizeFileName(name: string): string {
   return path
@@ -31,11 +22,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No files uploaded" }, { status: 400 });
     }
 
-    // Fix: jika currentPath sudah absolut, pakai langsung tanpa join ROOT
-    const uploadDir = resolveSafe(
-      currentPath.startsWith("/") ? currentPath : path.join(ROOT, currentPath)
-    );
-
+    const uploadDir = resolveSafePath(decodeURIComponent(currentPath));
     await fs.mkdir(uploadDir, { recursive: true });
 
     const results = [];
@@ -67,7 +54,7 @@ export async function POST(req: Request) {
   } catch (err: any) {
     return NextResponse.json(
       { error: err.message ?? "Upload failed" },
-      { status: err.message === "Access denied" ? 403 : 500 }
+      { status: err.message?.includes("Access denied") ? 403 : 500 }
     );
   }
 }

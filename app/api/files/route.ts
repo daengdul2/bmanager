@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import { listFiles } from "@/lib/fs";
-import path from "path";
-
-const ROOT = "/sdcard/Download";
+import { listFiles, resolveSafePath } from "@/lib/fs";
 
 export async function GET(req: Request) {
   try {
@@ -10,17 +7,18 @@ export async function GET(req: Request) {
     const dir = searchParams.get("path") ?? "";
     const decodedDir = decodeURIComponent(dir);
 
-    // Validasi path agar tidak keluar dari ROOT
-    const resolvedRoot = path.resolve(ROOT);
-    const resolvedPath = path.resolve(path.join(ROOT, decodedDir));
-    if (!resolvedPath.startsWith(resolvedRoot)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // Validasi path menggunakan resolveSafePath dari lib/fs
+    // agar tidak duplikasi logika ROOT & path traversal protection
+    resolveSafePath(decodedDir);
 
     const files = await listFiles(decodedDir);
     return NextResponse.json(files);
 
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message?.includes("Access denied")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     console.error("Error reading folder:", err);
     return NextResponse.json(
       { error: "Cannot read folder" },

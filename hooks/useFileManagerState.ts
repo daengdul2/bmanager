@@ -2,8 +2,7 @@
 
 import { useState, useCallback } from "react";
 import type { FileItem } from "@/types/file";
-
-const ROOT = "/sdcard/Download";
+import { ROOT } from "@/lib/config";
 
 export function useFileManagerState() {
   // Fix utama: init path dengan ROOT bukan ""

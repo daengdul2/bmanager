@@ -1,8 +1,8 @@
 import fs from "fs/promises";
 import path from "path";
 import { getPreviewType } from "@/lib/fileTypes";
-
-export const ROOT = "/sdcard/Download";
+import { ROOT } from "@/lib/config";
+export { ROOT };
 
 export type FileEntry = {
   name: string;
@@ -14,13 +14,9 @@ export type FileEntry = {
 
 export function resolveSafePath(subPath = ""): string {
   const target = path.resolve(ROOT, subPath);
-
-  // Pastikan target adalah ROOT itu sendiri atau berada di dalamnya
-  // Gunakan ROOT + "/" agar "/sdcard/DownloadEvil" tidak lolos
   if (target !== ROOT && !target.startsWith(ROOT + "/")) {
     throw new Error("Invalid path: akses di luar direktori root tidak diizinkan");
   }
-
   return target;
 }
 
@@ -33,7 +29,6 @@ export async function listFiles(dir = ""): Promise<FileEntry[]> {
       entries.map(async (e) => {
         const fullPath = path.join(target, e.name);
         const stats = await fs.stat(fullPath);
-
         return {
           name: e.name,
           type: e.isDirectory() ? "folder" : "file",

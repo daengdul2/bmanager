@@ -1,0 +1,1 @@
+export const ROOT = process.env.FILE_MANAGER_ROOT ?? "/sdcard/Download";

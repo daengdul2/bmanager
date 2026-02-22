@@ -10,10 +10,10 @@ export default function GlobalTaskProgress() {
   return (
     <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[92%] max-w-md space-y-2 z-50">
       {tasks.map((task) => (
-        <div key={task.id} className="bg-slate-900 text-white p-4 rounded-xl shadow">
+        <div key={task.id} className="bg-white dark:bg-slate-900 text-slate-700 dark:text-white p-4 rounded-xl shadow transition-all duration-300 ease-in-out">
           <div className="text-xs mb-2">{task.label}</div>
 
-          <div className="w-full bg-gray-700 h-2 rounded overflow-hidden">
+          <div className="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded overflow-hidden">
             <div
               className="h-full bg-blue-500 transition-all"
               style={{ width: `${task.progress}%` }}
@@ -27,7 +27,7 @@ export default function GlobalTaskProgress() {
           {task.status !== "running" && (
             <button
               onClick={() => removeTask(task.id)}
-              className="text-xs text-gray-400 mt-2 animate-pulse"
+              className="text-xs text-slate-700 dark:text-white mt-2"
             >
               Tutup
             </button>

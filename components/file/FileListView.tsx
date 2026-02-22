@@ -5,40 +5,30 @@ import { Folder, SearchX } from "lucide-react";
 import FileItemCard from "./FileItemCard";
 import FileItemList from "./FileItemList";
 import EmptyState from "./EmptyState";
-import ActionBar from "@/components/footer/ActionBar";
 
 import type { FileItem } from "@/types/file";
 
 interface Props {
   loading: boolean;
-  totalCount: number;         // Fix #3: ganti files[] dengan totalCount untuk empty state check
+  totalCount: number;        // Fix #2: wajib, bukan optional
   sortedFiles: FileItem[];
   viewMode: "grid" | "list";
   selectedFiles: Set<string>;
-  // Fix #3: hapus selectedCount
+  query: string;             // Fix #3: terima sebagai prop bukan dari context
   onItemClick: (file: FileItem) => void;
   onSelect: (filePath: string) => void;
-  onClearSelection: () => void;
-  onDelete: () => void;
-  onRename: (oldPath: string) => void; // Fix #1: tambahkan parameter oldPath
 }
 
 export default function FileListView({
   loading,
-  totalCount,               // Fix #3
+  totalCount,
   sortedFiles,
   viewMode,
   selectedFiles,
+  query,
   onItemClick,
   onSelect,
-  onClearSelection,
-  onDelete,
-  onRename,
 }: Props) {
-  // Fix #2: derive selectedPath dari selectedFiles saat hanya 1 file dipilih
-  const selectedCount = selectedFiles.size;
-  const selectedPath = selectedCount === 1 ? Array.from(selectedFiles)[0] : null;
-
   // 1. Loading State
   if (loading) {
     return (
@@ -48,8 +38,9 @@ export default function FileListView({
     );
   }
 
-  // 2. Empty State (tidak ada file sama sekali)
-  if (totalCount === 0) {
+  // 2. Empty State — folder benar-benar kosong
+  // Fix #4: cek query === "" agar tidak tampil saat sedang search
+  if (totalCount === 0 && !query) {
     return <EmptyState icon={Folder} message="Folder ini kosong" />;
   }
 
@@ -60,11 +51,10 @@ export default function FileListView({
 
   return (
     <div className="relative min-h-screen pb-32">
-      {/* GRID / LIST VIEW */}
       <main className="p-4">
         {viewMode === "grid" ? (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-            {sortedFiles.map((file) => (
+            {sortedFiles.map(file => (
               <FileItemCard
                 key={file.path}
                 file={file}
@@ -76,7 +66,7 @@ export default function FileListView({
           </div>
         ) : (
           <div className="flex flex-col space-y-1">
-            {sortedFiles.map((file) => (
+            {sortedFiles.map(file => (
               <FileItemList
                 key={file.path}
                 file={file}
@@ -88,16 +78,6 @@ export default function FileListView({
           </div>
         )}
       </main>
-
-      {/* ACTION BAR — muncul saat ada seleksi */}
-      <ActionBar
-        selectedCount={selectedCount}
-        onClear={onClearSelection}
-        onDelete={onDelete}
-        // Fix #2: kirim selectedPath ke onRename, disable jika lebih dari 1 file dipilih
-        onRename={selectedPath ? () => onRename(selectedPath) : undefined}
-        onMove={() => {}} // TODO: Implement move
-      />
     </div>
   );
 }

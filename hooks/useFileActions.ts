@@ -52,7 +52,7 @@ export function useFileActions() {
   openCreateFolder(path, async (name) => {
     const taskId = addTask({
       id: crypto.randomUUID(),
-      type: "move",
+      type: "createFolder",
       label: `Membuat folder "${name}"`,
     });
 
@@ -165,14 +165,72 @@ const handleRename = async (oldPath: string) => {
       finishTask(taskId);
       clearSelection();
       refreshFiles();
-      setTimeout(() => removeTask(taskId), 3000);
+      
     } catch (error: any) {
       failTask(taskId);
       alert(`Gagal mengganti nama: ${error.message}`);
-      setTimeout(() => removeTask(taskId), 3000);
+      
     }
   });
 };
+
+const handleDownload = async (files: string[]) => {
+  if (files.length === 0) return;
+
+  const taskId = addTask({
+    id: crypto.randomUUID(),
+    type: "download",
+    label: files.length === 1
+      ? `Mengunduh ${files[0]}`
+      : `Mengunduh ${files.length} file`,
+  });
+
+  try {
+    if (files.length === 1) {
+      // === SINGLE FILE: GET ===
+      const filePath = files[0];
+      updateTask(taskId, 100);
+      finishTask(taskId);
+
+      window.location.href = `/api/download?path=${encodeURIComponent(filePath)}`;
+    } else {
+      // === MULTI FILE: POST ZIP ===
+      const res = await fetch("/api/download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ files }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error ?? "Download failed");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "download.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      updateTask(taskId, 100);
+      finishTask(taskId);
+      refreshFiles();
+    }
+  } catch (error: any) {
+    failTask(taskId);
+    alert(`Gagal mengunduh: ${error.message}`);
+    refreshFiles();
+  }
+};
+
+
+
+
 
   /* =========================
      UPLOAD MODAL
@@ -185,5 +243,6 @@ const handleRename = async (oldPath: string) => {
     handleCreateFolder,
     handleRename,
     handleOpenUpload,
+    handleDownload,
   };
 }
