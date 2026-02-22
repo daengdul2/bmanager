@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 
-export type TaskType = "upload" | "delete" | "move" | "createFolder" | "rename";
+export type TaskType = "upload" | "delete" | "move" | "createFolder" | "rename" | "download";
 
 export interface Task {
     id: string;

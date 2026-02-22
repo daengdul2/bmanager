@@ -17,10 +17,9 @@ export function useFileActions() {
     toggleSelect,
   } = useFileManager();
 
-  const { addTask, updateTask, finishTask, failTask, removeTask } = useTaskManager();
+  // Fix #1: hapus removeTask karena tidak dipakai
+  const { addTask, updateTask, finishTask, failTask } = useTaskManager();
   const { openModal, openPreview, openConfirm, openRename, openCreateFolder } = useModalManager();
-
-
 
   /* =========================
      HANDLE ITEM CLICK
@@ -29,7 +28,6 @@ export function useFileActions() {
     (file: FileItem) => {
       const fullPath = file.path || joinPath(path, file.name);
 
-      // Jika sedang dalam mode seleksi, toggle seleksi
       if (selectedFiles.size > 0) {
         toggleSelect(fullPath);
         return;
@@ -38,7 +36,6 @@ export function useFileActions() {
       if (file.type === "folder") {
         setPath(fullPath);
       } else {
-        // Kirim file sebagai { file: FileItem } ke modal preview
         openPreview(file);
       }
     },
@@ -48,194 +45,200 @@ export function useFileActions() {
   /* =========================
      CREATE FOLDER
   ========================= */
-  const handleCreateFolder = () => {
-  openCreateFolder(path, async (name) => {
-    const taskId = addTask({
-      id: crypto.randomUUID(),
-      type: "createFolder",
-      label: `Membuat folder "${name}"`,
-    });
-
-    try {
-      const res = await fetch("/api/folder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPath: path, name }),
+  const handleCreateFolder = useCallback(() => {
+    openCreateFolder(path, async (name) => {
+      const taskId = addTask({
+        id: crypto.randomUUID(),
+        type: "createFolder",
+        label: `Membuat folder "${name}"`,
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.error ?? "Create folder failed");
-      }
+      try {
+        const res = await fetch("/api/folder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currentPath: path, name }),
+        });
 
-      updateTask(taskId, 100);
-      finishTask(taskId);
-      refreshFiles();
-    } catch (error: any) {
-      failTask(taskId);
-      alert(`Gagal membuat folder: ${error.message}`);
-    }
-  });
-};
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error(errData?.error ?? "Create folder failed");
+        }
+
+        updateTask(taskId, 100);
+        finishTask(taskId);
+        refreshFiles();
+      } catch (error: any) {
+        failTask(taskId);
+        alert(`Gagal membuat folder: ${error.message}`);
+      }
+    });
+  }, [path, openCreateFolder, addTask, updateTask, finishTask, failTask, refreshFiles]);
 
   /* =========================
      DELETE
   ========================= */
-const handleDelete = async () => {
-  if (selectedFiles.size === 0) return;
+  const handleDelete = useCallback(async () => {
+    if (selectedFiles.size === 0) return;
 
-  // Ambil info dulu
-  let title = `Hapus ${selectedFiles.size} item?`;
-  let description = "Tindakan ini tidak dapat dibatalkan.";
-
-  try {
-    const infoRes = await fetch("/api/delete-info", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ files: Array.from(selectedFiles) }),
-    });
-
-    if (infoRes.ok) {
-      const info = await infoRes.json();
-      const folderNote = info.folderCount > 0
-        ? `${info.folderCount} folder dan ${info.totalFileCount} file`
-        : `${info.totalFileCount} file`;
-      description = `${folderNote} akan dihapus.\nTotal ukuran: ${info.totalSizeFormatted}\n\nTindakan ini tidak dapat dibatalkan.`;
-    }
-  } catch {
-    // tetap lanjut dengan pesan default
-  }
-
-  openConfirm(title, description, async () => {
-    const taskId = addTask({
-      id: crypto.randomUUID(),
-      type: "delete",
-      label: `Menghapus ${selectedFiles.size} item`,
-    });
+    let title = `Hapus ${selectedFiles.size} item?`;
+    let description = "Tindakan ini tidak dapat dibatalkan.";
 
     try {
-      const res = await fetch("/api/delete", {
+      const infoRes = await fetch("/api/delete-info", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ files: Array.from(selectedFiles) }),
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.error ?? "Delete failed");
+      if (infoRes.ok) {
+        const info = await infoRes.json();
+        const folderNote = info.folderCount > 0
+          ? `${info.folderCount} folder dan ${info.totalFileCount} file`
+          : `${info.totalFileCount} file`;
+        description = `${folderNote} akan dihapus.\nTotal ukuran: ${info.totalSizeFormatted}\n\nTindakan ini tidak dapat dibatalkan.`;
       }
-
-      updateTask(taskId, 100);
-      finishTask(taskId);
-      clearSelection();
-      refreshFiles();
-    } catch (error: any) {
-      failTask(taskId);
-      alert(`Gagal menghapus: ${error.message}`);
+    } catch {
+      // tetap lanjut dengan pesan default
     }
-  });
-};
+
+    openConfirm(title, description, async () => {
+      const taskId = addTask({
+        id: crypto.randomUUID(),
+        type: "delete",
+        label: `Menghapus ${selectedFiles.size} item`,
+      });
+
+      try {
+        const res = await fetch("/api/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files: Array.from(selectedFiles) }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error(errData?.error ?? "Delete failed");
+        }
+
+        updateTask(taskId, 100);
+        finishTask(taskId);
+        clearSelection();
+        refreshFiles();
+      } catch (error: any) {
+        failTask(taskId);
+        alert(`Gagal menghapus: ${error.message}`);
+      }
+    });
+  }, [selectedFiles, openConfirm, addTask, updateTask, finishTask, failTask, clearSelection, refreshFiles]);
 
   /* =========================
      RENAME
   ========================= */
-const handleRename = async (oldPath: string) => {
-  const oldName = oldPath.split("/").pop() ?? "";
+  const handleRename = useCallback(async (oldPath: string) => {
+    const oldName = oldPath.split("/").pop() ?? "";
 
-  openRename(oldPath, oldName, async (newName) => {
+    openRename(oldPath, oldName, async (newName) => {
+      const taskId = addTask({
+        id: crypto.randomUUID(),
+        type: "rename",
+        label: `Mengganti nama menjadi "${newName}"`,
+      });
+
+      try {
+        const res = await fetch("/api/rename", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ oldPath, newName }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error(errData?.error ?? "Rename failed");
+        }
+
+        updateTask(taskId, 100);
+        finishTask(taskId);
+        clearSelection();
+        refreshFiles();
+      } catch (error: any) {
+        failTask(taskId);
+        alert(`Gagal mengganti nama: ${error.message}`);
+      }
+    });
+  }, [openRename, addTask, updateTask, finishTask, failTask, clearSelection, refreshFiles]);
+
+  /* =========================
+     DOWNLOAD
+  ========================= */
+  const handleDownload = useCallback(async (files: string[]) => {
+    if (files.length === 0) return;
+
+    // Fix #2: label pakai nama file saja, bukan path penuh
+    const label = files.length === 1
+      ? `Mengunduh ${files[0].split("/").pop()}`
+      : `Mengunduh ${files.length} file`;
+
     const taskId = addTask({
       id: crypto.randomUUID(),
-      type: "rename",
-      label: `Mengganti nama menjadi "${newName}"`,
+      type: "download",
+      label,
     });
 
     try {
-      const res = await fetch("/api/rename", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ oldPath, newName }),
-      });
+      let downloadUrl: string;
+      let downloadName: string;
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.error ?? "Rename failed");
+      if (files.length === 1) {
+        // Fix #5: single file juga pakai anchor agar konsisten dengan multi file
+        downloadUrl = `/api/download?path=${encodeURIComponent(files[0])}`;
+        downloadName = files[0].split("/").pop() ?? "file";
+      } else {
+        // Multi file → ZIP
+        const res = await fetch("/api/download", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error(errData?.error ?? "Download failed");
+        }
+
+        const blob = await res.blob();
+        downloadUrl = URL.createObjectURL(blob);
+        downloadName = "download.zip";
       }
 
-      updateTask(taskId, 100);
-      finishTask(taskId);
-      clearSelection();
-      refreshFiles();
-      
-    } catch (error: any) {
-      failTask(taskId);
-      alert(`Gagal mengganti nama: ${error.message}`);
-      
-    }
-  });
-};
-
-const handleDownload = async (files: string[]) => {
-  if (files.length === 0) return;
-
-  const taskId = addTask({
-    id: crypto.randomUUID(),
-    type: "download",
-    label: files.length === 1
-      ? `Mengunduh ${files[0]}`
-      : `Mengunduh ${files.length} file`,
-  });
-
-  try {
-    if (files.length === 1) {
-      // === SINGLE FILE: GET ===
-      const filePath = files[0];
-      updateTask(taskId, 100);
-      finishTask(taskId);
-
-      window.location.href = `/api/download?path=${encodeURIComponent(filePath)}`;
-    } else {
-      // === MULTI FILE: POST ZIP ===
-      const res = await fetch("/api/download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ files }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.error ?? "Download failed");
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-
+      // Fix #4: trigger download via anchor — lebih konsisten dan terkontrol
       const a = document.createElement("a");
-      a.href = url;
-      a.download = "download.zip";
+      a.href = downloadUrl;
+      a.download = downloadName;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+
+      // Revoke blob URL jika multi file
+      if (files.length > 1) {
+        URL.revokeObjectURL(downloadUrl);
+      }
 
       updateTask(taskId, 100);
       finishTask(taskId);
-      refreshFiles();
+      // Fix #3: hapus refreshFiles() — download tidak mengubah file
+    } catch (error: any) {
+      failTask(taskId);
+      alert(`Gagal mengunduh: ${error.message}`);
     }
-  } catch (error: any) {
-    failTask(taskId);
-    alert(`Gagal mengunduh: ${error.message}`);
-    refreshFiles();
-  }
-};
-
-
-
-
+  }, [addTask, updateTask, finishTask, failTask]);
 
   /* =========================
      UPLOAD MODAL
   ========================= */
-  const handleOpenUpload = () => openModal("upload");
+  const handleOpenUpload = useCallback(() => {
+    openModal("upload");
+  }, [openModal]);
 
   return {
     handleItemClick,
